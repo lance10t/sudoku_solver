@@ -7,16 +7,18 @@ hm_grid = defaultdict(set)
 total_moves = 0
 total_backtracks = 0
 
+# This board configuration is supposedly the "World's Hardest Sudoku"
+# https://gizmodo.com/can-you-solve-the-10-hardest-logic-puzzles-ever-created-1064112665
 board = [
-    [0, 0, 7, 1, 0, 2, 5, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [1, 0, 0, 3, 9, 7, 0, 0, 4],
-    [2, 0, 0, 4, 0, 8, 0, 0, 7],
-    [0, 0, 0, 6, 7, 3, 0, 0, 0],
-    [7, 1, 4, 0, 0, 0, 8, 6, 3],
-    [9, 0, 0, 0, 0, 0, 0, 0, 6],
-    [4, 5, 0, 0, 0, 0, 0, 7, 1],
-    [0, 0, 2, 7, 3, 1, 4, 0, 0],
+    [8, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 3, 6, 0, 0, 0, 0, 0],
+    [0, 7, 0, 0, 9, 0, 2, 0, 0],
+    [0, 5, 0, 0, 0, 7, 0, 0, 0],
+    [0, 0, 0, 0, 4, 5, 7, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 3, 0],
+    [0, 0, 1, 0, 0, 0, 0, 6, 8],
+    [0, 0, 8, 5, 0, 0, 0, 1, 0],
+    [0, 9, 0, 0, 0, 0, 4, 0, 0],
 ]
 
 
@@ -25,6 +27,8 @@ def grid_num(row, col):
     return ((row // 3) * 3) + (col // 3)
 
 def init_hash_map(board):
+    """ We make use of dictionaries of sets to keep track of the numbers in rows, cols, and grids.
+    This makes the search for validity faster than iterating through unnecessarily """
 
     global hm_row, hm_col, hm_grid
 
@@ -44,6 +48,7 @@ def init_hash_map(board):
     return hm_row, hm_col, hm_grid
 
 def print_board(board):
+    """ Prints the board """
     for i in range(len(board)):
         for j in range(len(board[i])):
             print(f' {board[i][j]} ', end='')
