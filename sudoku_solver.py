@@ -84,6 +84,8 @@ def solve(board):
 
     # Get next valid cell
     row, col = get_next_cell(board)
+    
+    # Base case - we have no more unfilled cells.  Solved!
     if row == col == None:
         return True
 
