@@ -114,9 +114,8 @@ def solve(board):
     return False
 
 if __name__ == '__main__':
-    # print_board(board)
+
     hm_row, hm_col, hm_grid = init_hash_map(board)
-    # print(is_valid(board, 0, 0, 5))
 
     if solve(board):
         print(f'Solved in {total_moves} steps, backtracking {total_backtracks} times')
