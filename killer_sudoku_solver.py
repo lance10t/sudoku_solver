@@ -1,5 +1,14 @@
 from collections import defaultdict
 
+# Helper functions
+from grid import grid_num, rc2cell, cell2rc
+from config import GRID_SIZE, V, board_config, board_constraints
+
+# Graph implementation details
+from sudoku_graph import Graph, get_graph
+
+import time
+
 hm_row = defaultdict(set)
 hm_col = defaultdict(set)
 hm_grid = defaultdict(set)
@@ -7,24 +16,6 @@ hm_grid = defaultdict(set)
 total_moves = 0
 total_backtracks = 0
 
-# This board configuration is supposedly the "World's Hardest Sudoku"
-# https://gizmodo.com/can-you-solve-the-10-hardest-logic-puzzles-ever-created-1064112665
-board = [
-    [8, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 3, 6, 0, 0, 0, 0, 0],
-    [0, 7, 0, 0, 9, 0, 2, 0, 0],
-    [0, 5, 0, 0, 0, 7, 0, 0, 0],
-    [0, 0, 0, 0, 4, 5, 7, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 3, 0],
-    [0, 0, 1, 0, 0, 0, 0, 6, 8],
-    [0, 0, 8, 5, 0, 0, 0, 1, 0],
-    [0, 9, 0, 0, 0, 0, 4, 0, 0],
-]
-
-
-def grid_num(row, col):
-    """ Returns the 3x3 grid number - 0-indexed """
-    return ((row // 3) * 3) + (col // 3)
 
 def init_hash_map(board):
     """ We make use of dictionaries of sets to keep track of the numbers in rows, cols, and grids.
@@ -54,7 +45,7 @@ def print_board(board):
             print(f' {board[i][j]} ', end='')
         print()
 
-def is_valid(board, row, col, num):
+def is_valid(board, row, col, num, board_graph=None):
     """ Checks whether it is valid to have num in board[row][col] """
 
     # Check that coordinate is empty
@@ -65,7 +56,38 @@ def is_valid(board, row, col, num):
         return False
 
     grid = grid_num(row, col)
-    return num not in hm_grid[grid]
+    if num in hm_grid[grid]:
+        return False
+    
+    # Check connected component constraint
+    if board_graph is None:
+        return True  # Has to be True if no board_graph (Kill Sudoku) since all constraints were already checked
+    else:
+        # Obtain list of all nodes in connected component
+        for component_num in range(len(board_graph.cc)):
+            connected_nodes = board_graph.cc[component_num]
+            cell = rc2cell(row, col)
+            if cell in connected_nodes:
+                break
+
+        # As long as one of the cells is still 0, we return True first
+        # TODO Can be optimised to skip numbers we know definitely will no longer work?
+        current_sum = 0
+        for cell in connected_nodes:
+            r,c = cell2rc(cell)
+            if (r,c) == (row,col):
+                current_sum += num # Current number being evaluated
+            elif board[r][c] == 0:
+                return True
+            else:
+                current_sum += board[r][c]
+
+        if current_sum == board_graph.constraints[component_num]:
+            # print(f'Matched component {component_num} with sum of {current_sum}')
+            return True
+        else:
+            return False
+
 
 def get_next_cell(board):
     """ Returns the next available cell - returns None, None if no more valid cells (meaning we have solved it) """
@@ -77,23 +99,30 @@ def get_next_cell(board):
 
     return None, None
 
-def solve(board):
+def solve(board, board_graph):
     """ Recursive function to solve the board """
 
     global total_moves, total_backtracks
 
     # Get next valid cell
     row, col = get_next_cell(board)
+    print(f'Solving [{row}:{col}]')
     
     # Base case - we have no more unfilled cells.  Solved!
     if row == col == None:
         return True
 
     for guess in range(1,10):
-        if is_valid(board, row, col, guess):
+        if is_valid(board, row, col, guess, board_graph):
             total_moves += 1
 
             board[row][col] = guess
+            
+            from contextlib import redirect_stdout
+            with open('solution.log', 'a') as f:
+                with redirect_stdout(f):
+                    print_board(board)
+                    print()
             
             # Update the hash map
             grid = grid_num(row, col)
@@ -102,7 +131,7 @@ def solve(board):
             hm_grid[grid].add(guess)
 
             # Recurse
-            if not solve(board):  # Wrong guess - backtrack
+            if not solve(board, board_graph):  # Wrong guess - backtrack
                 total_backtracks += 1
                 hm_grid[grid].remove(guess)
                 hm_col[col].remove(guess)
@@ -115,11 +144,21 @@ def solve(board):
 
 if __name__ == '__main__':
 
+    start_time = time.time()
+    board_graph = get_graph(board_config, board_constraints)
+    # board_graph.print_graph()
+
+    # Initialises the empty board
+    board = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     hm_row, hm_col, hm_grid = init_hash_map(board)
 
-    if solve(board):
+    if solve(board, board_graph):
+        end_time = time.time()
         print(f'Solved in {total_moves} steps, backtracking {total_backtracks} times')
+        print(f'Total time taken: {end_time-start_time} seconds')
         print_board(board)
     else:
+        end_time = time.time()
         print('No solutions found')
+        print(f'Total time taken: {end_time-start_time} seconds')
         print_board(board)
